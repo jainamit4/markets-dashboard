@@ -11,6 +11,8 @@ export const YAHOO_USER_AGENT =
 const CHART_PREFIX = "/v8/finance/chart/";
 const SYMBOL = /^[-^=._A-Za-z0-9]+$/;
 const QUERY_KEYS = ["range", "interval", "includePrePost"] as const;
+const PREFIXES = ["/api/yahoo", "/yahoo"] as const;
+const FORWARDED_PATH_HEADERS = ["x-forwarded-uri", "x-invoke-path", "x-matched-path"] as const;
 
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
@@ -50,18 +52,72 @@ function decodePath(pathname: string): string {
   }
 }
 
+/** Read a query value without splitting on `=` inside Yahoo symbols like CL=F. */
+export function rawQueryParam(search: string, key: string): string | undefined {
+  const q = search.startsWith("?") ? search.slice(1) : search;
+  const prefix = `${key}=`;
+  for (const part of q.split("&")) {
+    if (!part.startsWith(prefix)) continue;
+    const value = part.slice(prefix.length);
+    try {
+      return decodeURIComponent(value.replace(/\+/g, " "));
+    } catch {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function stripProxyPrefix(pathname: string): string {
+  let path = decodePath(pathname);
+  for (const prefix of PREFIXES) {
+    if (path === prefix || path.startsWith(`${prefix}/`)) {
+      path = path.slice(prefix.length) || "/";
+      break;
+    }
+  }
+  if (!path.startsWith("/")) path = `/${path}`;
+  return path;
+}
+
+function urlHasChartPath(requestUrl: string): boolean {
+  try {
+    return decodePath(new URL(requestUrl).pathname).includes(CHART_PREFIX);
+  } catch {
+    return false;
+  }
+}
+
+/** Prefer the original chart path when Vercel rewrites `/api/yahoo/:path*` → `/api/yahoo`. */
+export function resolveYahooRequestUrl(request: Request): string {
+  if (urlHasChartPath(request.url)) return request.url;
+
+  const incoming = new URL(request.url);
+  for (const key of FORWARDED_PATH_HEADERS) {
+    const value = request.headers.get(key);
+    if (!value) continue;
+    const candidate =
+      value.startsWith("http://") || value.startsWith("https://")
+        ? value
+        : `${incoming.origin}${value.startsWith("/") ? value : `/${value}`}`;
+    if (urlHasChartPath(candidate)) return candidate;
+  }
+  return request.url;
+}
+
 export function yahooPathFromRequestUrl(
   requestUrl: string,
 ): { path: string; search: string } | { error: string } {
   const url = new URL(requestUrl);
-  let pathname = decodePath(url.pathname);
-  for (const prefix of ["/api/yahoo", "/yahoo"]) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      pathname = pathname.slice(prefix.length) || "/";
-      break;
+  let pathname = stripProxyPrefix(url.pathname);
+
+  if (!pathname.startsWith(CHART_PREFIX)) {
+    const rest = rawQueryParam(url.search, "path");
+    if (rest) {
+      pathname = stripProxyPrefix(rest.startsWith("/") ? rest : `/${rest}`);
     }
   }
-  if (!pathname.startsWith("/")) pathname = `/${pathname}`;
+
   if (!pathname.startsWith(CHART_PREFIX)) {
     return { error: "Only /v8/finance/chart/{symbol} is proxied" };
   }
@@ -102,7 +158,7 @@ export async function proxyYahooChart(request: Request): Promise<Response> {
     return json({ error: "Method not allowed" }, 405, cors);
   }
 
-  const parsed = yahooPathFromRequestUrl(request.url);
+  const parsed = yahooPathFromRequestUrl(resolveYahooRequestUrl(request));
   if ("error" in parsed) {
     return json({ error: parsed.error }, 400, cors);
   }

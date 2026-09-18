@@ -1,4 +1,4 @@
-import { proxyYahooChart } from "../_lib/yahooProxy";
+import { proxyYahooChart } from "../../../../_lib/yahooProxy";
 
 export const config = { runtime: "edge" };
 
