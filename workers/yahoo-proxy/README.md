@@ -1,6 +1,6 @@
 # Yahoo CORS proxy (Cloudflare Worker)
 
-Same behavior as the Vercel function in `api/yahoo/[...path].ts`: forward `/api/yahoo/v8/finance/chart/{symbol}` to Yahoo with a browser User-Agent, and allow github.io / Vercel / localhost origins.
+Same behavior as the Vercel function in `api/yahoo.ts`: forward `/api/yahoo/v8/finance/chart/{symbol}` to Yahoo with a browser User-Agent, and allow github.io / Vercel / localhost origins.
 
 ```bash
 cd workers/yahoo-proxy

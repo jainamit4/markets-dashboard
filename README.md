@@ -17,7 +17,7 @@ This project is a browser-launchable dashboard: live Yahoo Finance series when a
 Yahoo’s chart API (`query1.finance.yahoo.com`) does not send CORS headers, so a browser on GitHub Pages cannot read it directly. This repo therefore:
 
 1. **Local `npm run dev` / `npm run preview`** — Vite proxies `/api/yahoo` → `https://query1.finance.yahoo.com` (same as before).
-2. **Vercel** — a serverless Edge function at `/api/yahoo/[...path]` does the same proxy, with CORS for github.io, `*.vercel.app`, and localhost. Same-origin `/api/yahoo` is used automatically. **This is the path for always-Live charts.**
+2. **Vercel** — a serverless Edge function at `/api/yahoo` does the same proxy, with CORS for github.io, `*.vercel.app`, and localhost. Nested chart paths are rewritten to that function (Vite does not register Next-style `[...path]` catch-alls). Same-origin `/api/yahoo` is used automatically. **This is the path for always-Live charts.**
 3. **GitHub Pages alone** — static hosting, no `/api`. The app still tries Yahoo from the browser, then falls back to **Sample** JSON unless you set `VITE_YAHOO_PROXY_BASE` at build time to a deployed proxy (the Vercel app URL or a Cloudflare Worker).
 
 `fetchYahooLive` in `src/lib/marketData.ts` picks:
@@ -32,9 +32,18 @@ No API keys. The proxy only forwards `/v8/finance/chart/{symbol}`; it does not i
 ### Deploy to Vercel (always-Live)
 
 1. Open [Vercel](https://vercel.com) → **Add New…** → **Project** → **Import** `jainamit4/markets-dashboard` (or your fork).
-2. Leave the Vite defaults (`npm run build`, output `dist`). `vercel.json` already prefers `/api/*` over the SPA fallback. Hash routing is unchanged.
-3. **Deploy.** Charts on `https://<project>.vercel.app` should show **Live**.
-4. Optional: to keep using GitHub Pages as the public URL with Live data, set repo variable `VITE_YAHOO_PROXY_BASE` to the Vercel origin (no trailing slash), e.g. `https://<project>.vercel.app`. The Pages workflow passes it into `npm run build`.
+2. Leave the Vite defaults (`npm run build`, output `dist`). Do not set a custom output directory that would skip `/api` functions. `vercel.json` rewrites `/api/yahoo/*` to the flattened `/api/yahoo` function, then falls back to the SPA. Hash routing is unchanged.
+3. **Deploy.** Charts on `https://<project>.vercel.app` should show **Live**. After a merge to `main`, GitHub-linked projects auto-redeploy; otherwise use **Redeploy** in the Vercel UI.
+4. Confirm the proxy with:
+
+```bash
+curl -sS -D - -o /tmp/yahoo-chart.json \
+  "https://markets-dashboard-rose.vercel.app/api/yahoo/v8/finance/chart/CL%3DF?range=5d&interval=1d"
+```
+
+Expect **HTTP 200** and JSON whose `chart.result[0].meta.symbol` is `CL=F`. A `404` with `x-vercel-error: NOT_FOUND` means the function was not in that deployment.
+
+5. Optional: to keep using GitHub Pages as the public URL with Live data, set repo variable `VITE_YAHOO_PROXY_BASE` to the Vercel origin (no trailing slash), e.g. `https://<project>.vercel.app`. The Pages workflow passes it into `npm run build`.
 
 ### Cloudflare Worker (optional, stay on Pages)
 
@@ -103,7 +112,7 @@ Yahoo Finance chart API (`/v8/finance/chart/{symbol}`).
 | Environment | Live path |
 | --- | --- |
 | `npm run dev` / `preview` | Vite `/api/yahoo` proxy |
-| Vercel production | Same-origin `/api/yahoo` Edge function |
+| Vercel production | Same-origin `/api/yahoo` Edge function (`/api/yahoo/v8/finance/chart/{symbol}`) |
 | GitHub Pages with `VITE_YAHOO_PROXY_BASE` | Deployed Vercel or Worker proxy |
 | GitHub Pages without a proxy | Direct Yahoo (usually CORS-blocked) → **Sample** |
 
@@ -160,7 +169,7 @@ Only Google’s 0.24 Wh/prompt figure is a published production measurement; eve
 ## Architecture notes
 
 - Fetch layer: `src/lib/marketData.ts` (live Yahoo → sample JSON)
-- Yahoo proxy: `api/yahoo/[...path].ts` (Vercel Edge) and `workers/yahoo-proxy/` (Cloudflare)
+- Yahoo proxy: `api/yahoo.ts` (Vercel Edge; nested `/api/yahoo/*` rewritten here) and `workers/yahoo-proxy/` (Cloudflare)
 - Time windows: `src/lib/ranges.ts`
 - AI panel config: `src/data/aiPricing.ts`
 - DRAM config: `src/data/dram.ts`
