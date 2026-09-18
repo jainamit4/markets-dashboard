@@ -16,7 +16,7 @@ const yahooProxy = {
 } as const;
 
 export default defineConfig({
-  base: "./",
+  base: "/markets-dashboard/",
   plugins: [react()],
   server: {
     host: true,
