@@ -74,6 +74,30 @@ async function fetchJson(url: string, signal: AbortSignal): Promise<unknown> {
   return res.json();
 }
 
+/** Strip trailing slashes; accept either origin or origin + /api/yahoo. */
+function yahooProxyPrefixFromEnv(): string | undefined {
+  const raw = import.meta.env.VITE_YAHOO_PROXY_BASE?.trim();
+  if (!raw) return undefined;
+  const base = raw.replace(/\/+$/, "");
+  if (/\/api\/yahoo$/i.test(base)) return base;
+  return `${base}/api/yahoo`;
+}
+
+function yahooLiveUrls(symbol: string, query: string): string[] {
+  const encoded = encodeURIComponent(symbol);
+  const pathAndQuery = `/v8/finance/chart/${encoded}?${query}`;
+  const urls: string[] = [];
+  const configured = yahooProxyPrefixFromEnv();
+  if (configured) {
+    urls.push(`${configured}${pathAndQuery}`);
+  } else {
+    // Vite dev/preview proxy, or Vercel same-origin serverless `/api/yahoo`
+    urls.push(`/api/yahoo${pathAndQuery}`);
+  }
+  urls.push(`https://query1.finance.yahoo.com${pathAndQuery}`);
+  return urls;
+}
+
 async function fetchYahooLive(
   symbol: string,
   range: TimeRange,
@@ -81,11 +105,7 @@ async function fetchYahooLive(
 ): Promise<ReturnType<typeof parseYahoo>> {
   const { range: yahooRange, interval } = yahooParams(range);
   const query = `range=${yahooRange}&interval=${interval}&includePrePost=false`;
-  const encoded = encodeURIComponent(symbol);
-  const urls = [
-    `/api/yahoo/v8/finance/chart/${encoded}?${query}`,
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?${query}`,
-  ];
+  const urls = yahooLiveUrls(symbol, query);
   let lastError: unknown;
   for (const url of urls) {
     try {

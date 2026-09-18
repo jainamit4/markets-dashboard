@@ -33,6 +33,10 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+        env:
+          # Optional: set this GitHub Actions variable to a deployed Vercel/Worker
+          # origin so Pages can show Live Yahoo charts instead of Sample.
+          VITE_YAHOO_PROXY_BASE: ${{ vars.VITE_YAHOO_PROXY_BASE }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

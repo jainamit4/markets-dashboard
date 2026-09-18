@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const hostedOnVercel = Boolean(
+  (globalThis as { process?: { env?: { VERCEL?: string } } }).process?.env?.VERCEL,
+);
+
 const yahooProxy = {
   "/api/yahoo": {
     target: "https://query1.finance.yahoo.com",
@@ -16,7 +20,8 @@ const yahooProxy = {
 } as const;
 
 export default defineConfig({
-  base: "/markets-dashboard/",
+  // GitHub Pages is served under /markets-dashboard/; Vercel hosts at /
+  base: hostedOnVercel ? "/" : "/markets-dashboard/",
   plugins: [react()],
   server: {
     host: true,
