@@ -2,13 +2,50 @@
 
 Interactive two-page markets desk for [commodities](#page-1--commodities) and [country equity indexes](#page-2--country-indexes). Built as a Vite + React + TypeScript SPA with Recharts.
 
+**Deploy this repo to Vercel for Live-always; Pages needs `VITE_YAHOO_PROXY_BASE` pointing at the proxy.**
+
 **Live (GitHub Pages):** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/)
 
 That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes)
 
 Repo: [https://github.com/jainamit4/markets-dashboard](https://github.com/jainamit4/markets-dashboard)
 
-This project is a browser-launchable dashboard: live Yahoo Finance series when the API is reachable, and **labeled cached snapshots** when it is not. DRAM and AI energy numbers that are not vendor-published are marked **illustrative / estimated**. Nothing unlabeled is presented as a live market print.
+This project is a browser-launchable dashboard: live Yahoo Finance series when a Yahoo proxy is reachable, and **labeled cached snapshots** when it is not. DRAM and AI energy numbers that are not vendor-published are marked **illustrative / estimated**. Nothing unlabeled is presented as a live market print.
+
+## How Live Yahoo data works
+
+Yahoo’s chart API (`query1.finance.yahoo.com`) does not send CORS headers, so a browser on GitHub Pages cannot read it directly. This repo therefore:
+
+1. **Local `npm run dev` / `npm run preview`** — Vite proxies `/api/yahoo` → `https://query1.finance.yahoo.com` (same as before).
+2. **Vercel** — a serverless Edge function at `/api/yahoo/[...path]` does the same proxy, with CORS for github.io, `*.vercel.app`, and localhost. Same-origin `/api/yahoo` is used automatically. **This is the path for always-Live charts.**
+3. **GitHub Pages alone** — static hosting, no `/api`. The app still tries Yahoo from the browser, then falls back to **Sample** JSON unless you set `VITE_YAHOO_PROXY_BASE` at build time to a deployed proxy (the Vercel app URL or a Cloudflare Worker).
+
+`fetchYahooLive` in `src/lib/marketData.ts` picks:
+
+- `VITE_YAHOO_PROXY_BASE` + `/api/yahoo/v8/finance/chart/...` when that env var is set
+- otherwise relative `/api/yahoo/...` (Vite in development, Vercel in production)
+- then direct `query1.finance.yahoo.com` as a last live attempt
+- then `public/sample-data/*.json` (labeled **Sample**)
+
+No API keys. The proxy only forwards `/v8/finance/chart/{symbol}`; it does not invent prices.
+
+### Deploy to Vercel (always-Live)
+
+1. Open [Vercel](https://vercel.com) → **Add New…** → **Project** → **Import** `jainamit4/markets-dashboard` (or your fork).
+2. Leave the Vite defaults (`npm run build`, output `dist`). `vercel.json` already prefers `/api/*` over the SPA fallback. Hash routing is unchanged.
+3. **Deploy.** Charts on `https://<project>.vercel.app` should show **Live**.
+4. Optional: to keep using GitHub Pages as the public URL with Live data, set repo variable `VITE_YAHOO_PROXY_BASE` to the Vercel origin (no trailing slash), e.g. `https://<project>.vercel.app`. The Pages workflow passes it into `npm run build`.
+
+### Cloudflare Worker (optional, stay on Pages)
+
+If you want Pages + Live without Vercel, deploy the same CORS proxy from `workers/yahoo-proxy/`:
+
+```bash
+cd workers/yahoo-proxy
+npx wrangler deploy
+```
+
+Then set `VITE_YAHOO_PROXY_BASE` to the worker origin (for example `https://markets-dashboard-yahoo-proxy.<account>.workers.dev`) and rebuild Pages.
 
 ## Run locally
 
@@ -28,9 +65,11 @@ Then open the URL Vite prints (typically [http://localhost:5173](http://localhos
 
 ### Launch from a browser without the dev server
 
-**Use the live GitHub Pages site:** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/). Pushes to `main` build `dist/` and deploy via `.github/workflows/deploy-pages.yml`. Vite `base` is `/markets-dashboard/` so assets, the favicon, and `sample-data/` fetches resolve under that project URL.
+**GitHub Pages:** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/). Pushes to `main` build `dist/` and deploy via `.github/workflows/deploy-pages.yml`. Vite `base` is `/markets-dashboard/` so assets, the favicon, and `sample-data/` fetches resolve under that project URL.
 
-Locally, after `npm run build`, `npm run preview` serves the static app (Yahoo proxy still available). On Pages there is no proxy: the app tries Yahoo from the browser, and if CORS/network blocks it, charts fall back to the bundled sample snapshots with a **Sample** badge.
+**Vercel:** Vite `base` is `/` (detected via `VERCEL`). The Edge proxy makes Live the default.
+
+Locally, after `npm run build`, `npm run preview` serves the static app (Yahoo proxy still available). On Pages there is no proxy unless `VITE_YAHOO_PROXY_BASE` is set: the app tries Yahoo from the browser, and if CORS/network blocks it, charts fall back to the bundled sample snapshots with a **Sample** badge.
 
 ## What each page shows
 
@@ -61,7 +100,14 @@ Each chart card loads on its own. One failed series does not crash the page.
 
 Yahoo Finance chart API (`/v8/finance/chart/{symbol}`).
 
-In development and `vite preview`, requests go through the Vite proxy so the browser is not blocked by CORS. Direct `query1.finance.yahoo.com` is attempted as a second live path. If both fail, `public/sample-data/*.json` is used. Those JSON files are **cached Yahoo snapshots** captured when the samples were last refreshed — they are labeled **Sample** in the UI.
+| Environment | Live path |
+| --- | --- |
+| `npm run dev` / `preview` | Vite `/api/yahoo` proxy |
+| Vercel production | Same-origin `/api/yahoo` Edge function |
+| GitHub Pages with `VITE_YAHOO_PROXY_BASE` | Deployed Vercel or Worker proxy |
+| GitHub Pages without a proxy | Direct Yahoo (usually CORS-blocked) → **Sample** |
+
+Direct `query1.finance.yahoo.com` is attempted as a last live path. If live fetches fail, `public/sample-data/*.json` is used. Those JSON files are **cached Yahoo snapshots** captured when the samples were last refreshed — they are labeled **Sample** in the UI.
 
 | Series | Yahoo symbol | Unit |
 | --- | --- | --- |
@@ -114,6 +160,7 @@ Only Google’s 0.24 Wh/prompt figure is a published production measurement; eve
 ## Architecture notes
 
 - Fetch layer: `src/lib/marketData.ts` (live Yahoo → sample JSON)
+- Yahoo proxy: `api/yahoo/[...path].ts` (Vercel Edge) and `workers/yahoo-proxy/` (Cloudflare)
 - Time windows: `src/lib/ranges.ts`
 - AI panel config: `src/data/aiPricing.ts`
 - DRAM config: `src/data/dram.ts`

@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 .DS_Store
+.vercel
+.wrangler
+.dev.vars
 
 # Editor
 .vscode/*
