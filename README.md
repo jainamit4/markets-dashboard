@@ -2,6 +2,10 @@
 
 Interactive two-page markets desk for [commodities](#page-1--commodities) and [country equity indexes](#page-2--country-indexes). Built as a Vite + React + TypeScript SPA with Recharts.
 
+**Live (GitHub Pages):** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/)
+
+That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes)
+
 Repo: [https://github.com/jainamit4/markets-dashboard](https://github.com/jainamit4/markets-dashboard)
 
 This project is a browser-launchable dashboard: live Yahoo Finance series when the API is reachable, and **labeled cached snapshots** when it is not. DRAM and AI energy numbers that are not vendor-published are marked **illustrative / estimated**. Nothing unlabeled is presented as a live market print.
@@ -24,7 +28,9 @@ Then open the URL Vite prints (typically [http://localhost:5173](http://localhos
 
 ### Launch from a browser without the dev server
 
-After `npm run build`, `npm run preview` serves the static app. For GitHub Pages, deploy the `dist/` folder (this repo uses `base: './'` so relative asset paths work). On Pages there is no proxy: the app tries Yahoo from the browser, and if CORS/network blocks it, charts fall back to the bundled sample snapshots with a **Sample** badge.
+**Use the live GitHub Pages site:** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/). Pushes to `main` build `dist/` and deploy via `.github/workflows/deploy-pages.yml`. Vite `base` is `/markets-dashboard/` so assets, the favicon, and `sample-data/` fetches resolve under that project URL.
+
+Locally, after `npm run build`, `npm run preview` serves the static app (Yahoo proxy still available). On Pages there is no proxy: the app tries Yahoo from the browser, and if CORS/network blocks it, charts fall back to the bundled sample snapshots with a **Sample** badge.
 
 ## What each page shows
 

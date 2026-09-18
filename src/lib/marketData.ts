@@ -101,7 +101,7 @@ async function fetchYahooLive(
 function loadSampleFile(file: string): Promise<SampleFile> {
   const existing = sampleCache.get(file);
   if (existing) return existing;
-  const pending = fetch(`./sample-data/${file}`)
+  const pending = fetch(`${import.meta.env.BASE_URL}sample-data/${file}`)
     .then(async (res) => {
       if (!res.ok) throw new Error(`Sample ${file} missing (${res.status})`);
       return (await res.json()) as SampleFile;
