@@ -152,12 +152,17 @@ export async function loadMarketSeries(
     let points = live.points;
     let last = live.last;
     let note = spec.note;
+    let quotePrint: MarketSeries["quotePrint"];
 
     if (spec.quoteSymbol) {
       try {
         const quote = await fetchYahooLive(spec.quoteSymbol, "1D", signal);
         if (quote.last != null) {
-          note = `${spec.note ?? ""} Last S&P IPSA print (${spec.quoteSymbol}): ${quote.last.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${quote.currency ?? ""}`.trim();
+          quotePrint = {
+            label: "S&P IPSA last",
+            last: quote.last,
+            currency: quote.currency,
+          };
         }
       } catch {
         /* quote is best-effort */
@@ -177,6 +182,7 @@ export async function loadMarketSeries(
         note,
         fetchedAt: new Date().toISOString(),
         interval,
+        quotePrint,
       };
     }
     liveError = "Live payload had too few points";

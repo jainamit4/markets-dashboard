@@ -98,7 +98,7 @@ export const indexSpecs: SeriesSpec[] = [
     sampleFile: "ECH.json",
     accent: "copper",
     note:
-      "Yahoo Finance does not publish S&P IPSA (^IPSA) OHLC history — only a last print. The interactive chart is iShares MSCI Chile ETF (ECH), the most complete Chile equity series available on the same API.",
+      "Yahoo does not publish S&P IPSA OHLC history. Chart is iShares MSCI Chile (ECH); IPSA last print is shown when the quote endpoint responds.",
   },
   {
     id: "china",

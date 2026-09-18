@@ -72,6 +72,11 @@ export function ChartCard({ spec, state }: Props) {
           </div>
         ) : null}
       </div>
+      {series.quotePrint ? (
+        <div className="quote-print">
+          {series.quotePrint.label}: {formatPrice(series.quotePrint.last, series.quotePrint.currency)}
+        </div>
+      ) : null}
       {series.points.length >= 2 ? (
         <PriceChart series={series} color={color} />
       ) : (

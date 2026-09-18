@@ -19,6 +19,7 @@ export type MarketSeries = {
   note?: string;
   fetchedAt: string;
   interval?: string;
+  quotePrint?: { label: string; last: number; currency?: string };
 };
 
 export type SeriesSpec = {
