@@ -113,6 +113,9 @@ async function fetchYahooLive(
       return parseYahoo(json, symbol);
     } catch (err) {
       lastError = err;
+      const msg = err instanceof Error ? err.message : "";
+      // A 404 means Yahoo has no chart for this ticker; do not overwrite that with a later CORS miss.
+      if (/^404\b/.test(msg)) break;
     }
   }
   throw lastError instanceof Error ? lastError : new Error("Yahoo live fetch failed");
