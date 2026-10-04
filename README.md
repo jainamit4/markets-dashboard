@@ -1,12 +1,12 @@
 # markets-dashboard
 
-Interactive two-page markets desk for [commodities](#page-1--commodities) and [country equity indexes](#page-2--country-indexes). Built as a Vite + React + TypeScript SPA with Recharts.
+Interactive markets desk for [commodities](#page-1--commodities), [country equity indexes](#page-2--country-indexes), [currencies](#page-3--currencies), and [bond yields](#page-4--bond-yields). Built as a Vite + React + TypeScript SPA with Recharts.
 
 **Deploy this repo to Vercel for Live-always; Pages needs `VITE_YAHOO_PROXY_BASE` pointing at the proxy.**
 
 **Live (GitHub Pages):** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/)
 
-That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes)
+That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes) · [currencies](https://jainamit4.github.io/markets-dashboard/#/currencies) · [bond yields](https://jainamit4.github.io/markets-dashboard/#/yields)
 
 Repo: [https://github.com/jainamit4/markets-dashboard](https://github.com/jainamit4/markets-dashboard)
 
@@ -103,6 +103,30 @@ Time range control: **1D / 1W / 1M / 3M / 1Y / YTD**. Hover for tooltips; longer
 
 Each chart card loads on its own. One failed series does not crash the page.
 
+### Page 3 — Currencies
+
+Each card is that currency **against the US dollar**, using Yahoo’s USD/XXX `=X` pair so the quote is **units of the named currency per 1 US dollar** (not the inverted AUDUSD / GBPUSD / EURUSD convention).
+
+- Japanese yen (`JPY=X`) — yen per 1 USD
+- Mexican peso (`MXN=X`) — pesos per 1 USD (its own series, not Argentina or Brazil)
+- Australian dollar (`AUD=X`) — Australian dollars per 1 USD
+- Indian rupee (`INR=X`) — rupees per 1 USD
+- British pound (`GBP=X`) — pounds per 1 USD
+- Euro (`EUR=X`) — euros per 1 USD
+- Iranian rial (`IRR=X`) — rials per 1 USD (Yahoo’s print; official vs parallel-market convention can jump in the history)
+- Argentine peso (`ARS=X`) — pesos per 1 USD
+- Brazilian real (`BRL=X`) — reais per 1 USD
+
+Same Live → labeled Sample fallback as the other Yahoo pages.
+
+### Page 4 — Bond yields
+
+One 10-year sovereign yield card for the same places. The euro card is labeled **Germany 10-year Bund** (euro-area benchmark), not a fictional “euro country” yield.
+
+Yahoo’s chart API currently **404s** the former country `10Y=RR` tickers (`JP10Y=RR`, `MX10Y=RR`, `AU10Y=RR`, `IN10Y=RR`, `GB10Y=RR`, `DE10Y=RR`, `IR10Y=RR`, `AR10Y=RR`, `BR10Y=RR`). Those cards stay **Unavailable** with that reason. No invented yields, no US `^TNX` stand-in, no sample JSON.
+
+If Yahoo starts serving one of those symbols again, the existing live path will chart it.
+
 ## Data sources
 
 ### Live commodities and indexes
@@ -134,6 +158,16 @@ Direct `query1.finance.yahoo.com` is attempted as a last live path. If live fetc
 | Shanghai Composite | `000001.SS` | CNY |
 | Jakarta Composite | `^JKSE` | IDR |
 | Nikkei 225 | `^N225` | JPY |
+| Japanese yen | `JPY=X` | JPY per 1 USD |
+| Mexican peso | `MXN=X` | MXN per 1 USD |
+| Australian dollar | `AUD=X` | AUD per 1 USD |
+| Indian rupee | `INR=X` | INR per 1 USD |
+| British pound | `GBP=X` | GBP per 1 USD |
+| Euro | `EUR=X` | EUR per 1 USD |
+| Iranian rial | `IRR=X` | IRR per 1 USD |
+| Argentine peso | `ARS=X` | ARS per 1 USD |
+| Brazilian real | `BRL=X` | BRL per 1 USD |
+| Country 10-year yields | `XX10Y=RR` (see Page 4) | percent — **Unavailable** on this Yahoo path |
 
 ### Memory (DRAM)
 
@@ -174,4 +208,4 @@ Only Google’s 0.24 Wh/prompt figure is a published production measurement; eve
 - AI panel config: `src/data/aiPricing.ts`
 - DRAM config: `src/data/dram.ts`
 
-Not investment advice. Futures, indexes, and token prices move; refresh samples and the AI as-of date when you need a new snapshot.
+Not investment advice. Futures, indexes, FX, yields, and token prices move; refresh samples and the AI as-of date when you need a new snapshot.

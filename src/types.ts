@@ -30,12 +30,20 @@ export type SeriesSpec = {
   /** Optional second symbol used only for a last print (e.g. IPSA quote). */
   quoteSymbol?: string;
   unit: string;
-  sampleFile: string;
+  /** Cached Yahoo snapshot. Omit when no real public series exists — do not invent points. */
+  sampleFile?: string;
   accent: "gold" | "teal" | "copper" | "silver";
   note?: string;
+  /**
+   * Honest copy when Yahoo has no loadable series for this card.
+   * Live is still attempted when `symbol` is set; if it fails and there is no sample, the card
+   * shows this instead of a made-up chart.
+   */
+  unavailableReason?: string;
 };
 
 export type LoadState<T> =
   | { status: "loading" }
   | { status: "ready"; data: T }
-  | { status: "error"; message: string; data?: T };
+  | { status: "error"; message: string; data?: T }
+  | { status: "unavailable"; message: string };

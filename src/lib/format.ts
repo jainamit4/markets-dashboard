@@ -19,6 +19,7 @@ export function formatPrice(value: number, unit?: string): string {
     maximumFractionDigits: abs >= 1000 ? 2 : digits,
   }).format(value);
   if (!unit) return body;
+  if (unit === "%") return `${body}%`;
   if (unit.startsWith("USD") || unit.startsWith("¢")) return `${body} ${unit}`;
   return `${body} ${unit}`;
 }

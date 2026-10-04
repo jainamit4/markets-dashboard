@@ -18,6 +18,27 @@ type Props = {
 export function ChartCard({ spec, state }: Props) {
   const color = ACCENT[spec.accent];
 
+  if (state.status === "unavailable" || (state.status === "error" && spec.unavailableReason)) {
+    const reason = state.status === "unavailable" ? state.message : spec.unavailableReason;
+    return (
+      <article className={`card accent-${spec.accent}`}>
+        <header className="card-head">
+          <div>
+            <h3>{spec.title}</h3>
+            <p className="card-sub">{spec.subtitle}</p>
+          </div>
+          <span className="badge badge-unavailable">Unavailable</span>
+        </header>
+        <p className="error-copy">{reason}</p>
+        {state.status === "error" ? (
+          <p className="card-note">
+            Live attempt {spec.symbol}: {state.message}
+          </p>
+        ) : null}
+      </article>
+    );
+  }
+
   if (state.status === "loading") {
     return (
       <article className={`card accent-${spec.accent}`}>

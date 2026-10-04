@@ -20,6 +20,15 @@ const symbols = [
   "^JKSE",
   "^N225",
   "ECH",
+  "JPY=X",
+  "MXN=X",
+  "AUD=X",
+  "INR=X",
+  "GBP=X",
+  "EUR=X",
+  "IRR=X",
+  "ARS=X",
+  "BRL=X",
 ];
 
 const ranges = [

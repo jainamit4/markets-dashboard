@@ -8,7 +8,7 @@ export function AppShell() {
           <span className="brand-mark" aria-hidden="true" />
           <div>
             <div className="brand-name">Markets Desk</div>
-            <div className="brand-sub">Commodities · country indexes · AI economics</div>
+            <div className="brand-sub">Commodities · country indexes · currencies · bond yields</div>
           </div>
         </div>
         <nav className="nav" aria-label="Primary">
@@ -20,6 +20,18 @@ export function AppShell() {
             className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
           >
             Country indexes
+          </NavLink>
+          <NavLink
+            to="/currencies"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Currencies
+          </NavLink>
+          <NavLink
+            to="/yields"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Bond yields
           </NavLink>
         </nav>
       </header>

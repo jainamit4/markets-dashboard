@@ -210,6 +210,10 @@ export async function loadMarketSeries(
     liveError = err instanceof Error ? err.message : "Live fetch failed";
   }
 
+  if (!spec.sampleFile) {
+    throw new Error(liveError || `No Yahoo chart series for ${spec.symbol}`);
+  }
+
   const sample = fromSampleFile(await loadSampleFile(spec.sampleFile), range);
   if (sample.points.length < 1) {
     throw new Error(liveError || `No data for ${spec.symbol}`);
