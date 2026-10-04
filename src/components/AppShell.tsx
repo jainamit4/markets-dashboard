@@ -40,10 +40,10 @@ export function AppShell() {
       </main>
       <footer className="foot">
         <p>
-          Live series via Yahoo Finance chart API when reachable (proxied in <code>npm run dev</code> /{" "}
-          <code>npm run preview</code>). Otherwise the UI falls back to a labeled cached snapshot — never
-          presented as a live tick. DRAM and AI energy figures that are not vendor-published are marked
-          illustrative. Not investment advice.
+          Live series via Yahoo Finance (commodities, indexes, FX) and official yield publishers (FRED /
+          Tesouro Direto) when the matching proxy is reachable. Otherwise the UI falls back to a labeled
+          cached snapshot — never presented as a live tick. DRAM and AI energy figures that are not
+          vendor-published are marked illustrative. Not investment advice.
         </p>
       </footer>
     </div>

@@ -2,6 +2,8 @@ export type TimeRange = "1D" | "1W" | "1M" | "3M" | "1Y" | "YTD";
 
 export type DataSource = "live" | "sample";
 
+export type SeriesProvider = "yahoo" | "fred" | "tesouro";
+
 export type SeriesPoint = {
   t: number;
   v: number;
@@ -30,14 +32,21 @@ export type SeriesSpec = {
   /** Optional second symbol used only for a last print (e.g. IPSA quote). */
   quoteSymbol?: string;
   unit: string;
-  /** Cached Yahoo snapshot. Omit when no real public series exists — do not invent points. */
+  /** Cached snapshot (Yahoo or official). Omit when no real public series exists. */
   sampleFile?: string;
   accent: "gold" | "teal" | "copper" | "silver";
   note?: string;
+  /** Live fetch path. Default yahoo. */
+  provider?: SeriesProvider;
+  /** Publisher series id (FRED id, Tesouro rule, or Yahoo symbol). */
+  seriesId?: string;
+  frequency?: "daily" | "monthly";
+  sourceName?: string;
+  /** How the print is dated / averaged (e.g. monthly average, morning sell yield). */
+  asOfConvention?: string;
   /**
-   * Honest copy when Yahoo has no loadable series for this card.
-   * Live is still attempted when `symbol` is set; if it fails and there is no sample, the card
-   * shows this instead of a made-up chart.
+   * Honest copy when no public series can be fetched.
+   * Used instead of a made-up chart. Live is not attempted when this is set and provider is omitted.
    */
   unavailableReason?: string;
 };

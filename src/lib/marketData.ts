@@ -1,4 +1,5 @@
 import type { DataSource, MarketSeries, SeriesPoint, SeriesSpec, TimeRange } from "../types";
+import { fetchOfficialJson, filterOfficialByRange } from "./officialYields";
 import { filterPointsByRange, sampleRangeKey, yahooParams } from "./ranges";
 
 type YahooChartResponse = {
@@ -162,11 +163,94 @@ function fromSampleFile(
   };
 }
 
+function officialSourceLabel(spec: SeriesSpec, live: boolean): string {
+  const id = spec.seriesId ?? spec.symbol;
+  const source = spec.sourceName ?? (spec.provider === "tesouro" ? "Tesouro Direto" : "FRED");
+  const asOf = spec.asOfConvention ? ` · ${spec.asOfConvention}` : "";
+  if (live) return `${source} ${id}${asOf}`;
+  return `Cached ${source} snapshot (${id})${asOf}`;
+}
+
+async function loadOfficialSeries(
+  spec: SeriesSpec,
+  range: TimeRange,
+  signal: AbortSignal,
+): Promise<MarketSeries> {
+  const frequency = spec.frequency ?? (spec.provider === "tesouro" ? "daily" : "monthly");
+  const interval = frequency === "monthly" ? "monthly" : "1d";
+  const path =
+    spec.provider === "tesouro"
+      ? "/api/tesouro/ntnf-10y"
+      : `/api/fred/series/${encodeURIComponent(spec.seriesId ?? spec.symbol)}`;
+  let liveError: string | undefined;
+
+  try {
+    const live = await fetchOfficialJson(path, signal);
+    const points = filterOfficialByRange(live.observations ?? [], range, frequency);
+    if (points.length >= 1) {
+      return {
+        symbol: spec.seriesId ?? spec.symbol,
+        title: spec.title,
+        unit: spec.unit,
+        points,
+        last: points[points.length - 1]?.v,
+        source: "live" satisfies DataSource,
+        sourceLabel: officialSourceLabel(spec, true),
+        note: spec.note,
+        fetchedAt: new Date().toISOString(),
+        interval,
+      };
+    }
+    liveError = "Live payload had too few points in this window";
+  } catch (err) {
+    liveError = err instanceof Error ? err.message : "Live fetch failed";
+  }
+
+  if (!spec.sampleFile) {
+    throw new Error(liveError || `No official series for ${spec.seriesId ?? spec.symbol}`);
+  }
+
+  const file = await loadSampleFile(spec.sampleFile);
+  const bucket = file.ranges["1y"] ?? file.ranges["5d"] ?? file.ranges["1d"];
+  const points = filterOfficialByRange(bucket?.points ?? [], range, frequency);
+  if (points.length < 1) {
+    throw new Error(liveError || `No sample points for ${spec.seriesId ?? spec.symbol}`);
+  }
+
+  return {
+    symbol: spec.seriesId ?? spec.symbol,
+    title: spec.title,
+    unit: spec.unit,
+    currency: bucket?.currency,
+    points,
+    last: points[points.length - 1]?.v ?? bucket?.regularMarketPrice,
+    source: "sample",
+    sourceLabel: officialSourceLabel(spec, false),
+    note: [
+      spec.note,
+      liveError
+        ? `Live feed unavailable (${liveError}). Showing labeled sample snapshot.`
+        : "Showing labeled sample snapshot.",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    fetchedAt: file.fetchedAt,
+    interval: bucket?.interval ?? interval,
+  };
+}
+
 export async function loadMarketSeries(
   spec: SeriesSpec,
   range: TimeRange,
   signal: AbortSignal,
 ): Promise<MarketSeries> {
+  if (spec.unavailableReason && spec.provider !== "fred" && spec.provider !== "tesouro") {
+    throw new Error(spec.unavailableReason);
+  }
+  if (spec.provider === "fred" || spec.provider === "tesouro") {
+    return loadOfficialSeries(spec, range, signal);
+  }
+
   const { interval } = yahooParams(range);
   let liveError: string | undefined;
 

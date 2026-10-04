@@ -121,11 +121,19 @@ Same Live → labeled Sample fallback as the other Yahoo pages.
 
 ### Page 4 — Bond yields
 
-One 10-year sovereign yield card for the same places. The euro card is labeled **Germany 10-year Bund** (euro-area benchmark), not a fictional “euro country” yield.
+One 10-year sovereign yield card for the same places. Live data is **not** Yahoo `10Y=RR` (those tickers 404). Cards use FRED where it republishes the official OECD 10-year government yield, and Tesouro Direto where FRED has no Brazil 10-year series. Each card labels the source, series id, unit (percent), and as-of convention.
 
-Yahoo’s chart API currently **404s** the former country `10Y=RR` tickers (`JP10Y=RR`, `MX10Y=RR`, `AU10Y=RR`, `IN10Y=RR`, `GB10Y=RR`, `DE10Y=RR`, `IR10Y=RR`, `AR10Y=RR`, `BR10Y=RR`). Those cards stay **Unavailable** with that reason. No invented yields, no US `^TNX` stand-in, no sample JSON.
+- Japan — FRED `IRLTLT01JPM156N` (OECD 10-year JGB, monthly average, % per annum)
+- Mexico — FRED `IRLTLT01MXM156N`
+- Australia — FRED `IRLTLT01AUM156N`
+- India — FRED `INDIRLTLT01STM`
+- United Kingdom — FRED `IRLTLT01GBM156N` (10-year gilt)
+- Euro area — **Germany 10-year Bund**, FRED `IRLTLT01DEM156N` (the usual euro-area sovereign benchmark; the euro is not a country)
+- Brazil — Tesouro Direto NTN-F (Prefixado com Juros Semestrais) official **Taxa Venda Manhã**, instrument with remaining maturity nearest 10 years (daily). FRED has no Brazil 10-year OECD series.
+- Argentina — **Unavailable**. Checked FRED, BCRA v4 Monetarias, and datos.gob.ar (no current 10-year sovereign yield).
+- Iran — **Unavailable**. Checked FRED / OECD MEI and CBI.ir (no fetchable 10-year series).
 
-If Yahoo starts serving one of those symbols again, the existing live path will chart it.
+Monthly FRED windows (1D / 1W) may only have a last print. Same Live → labeled Sample fallback via `/api/fred` and `/api/tesouro`.
 
 ## Data sources
 
@@ -167,7 +175,15 @@ Direct `query1.finance.yahoo.com` is attempted as a last live path. If live fetc
 | Iranian rial | `IRR=X` | IRR per 1 USD |
 | Argentine peso | `ARS=X` | ARS per 1 USD |
 | Brazilian real | `BRL=X` | BRL per 1 USD |
-| Country 10-year yields | `XX10Y=RR` (see Page 4) | percent — **Unavailable** on this Yahoo path |
+| Japan 10-year JGB | FRED `IRLTLT01JPM156N` | % per annum, monthly average |
+| Mexico 10-year | FRED `IRLTLT01MXM156N` | % per annum, monthly average |
+| Australia 10-year | FRED `IRLTLT01AUM156N` | % per annum, monthly average |
+| India 10-year | FRED `INDIRLTLT01STM` | % per annum, monthly average |
+| UK 10-year gilt | FRED `IRLTLT01GBM156N` | % per annum, monthly average |
+| Germany 10-year Bund (euro-area card) | FRED `IRLTLT01DEM156N` | % per annum, monthly average |
+| Brazil ~10-year NTN-F | Tesouro Direto `NTNF-NEAREST-10Y` | % per annum, daily morning sell yield |
+| Argentina 10-year | — | **Unavailable** (no public series fetched) |
+| Iran 10-year | — | **Unavailable** (no public series fetched) |
 
 ### Memory (DRAM)
 
@@ -202,8 +218,9 @@ Only Google’s 0.24 Wh/prompt figure is a published production measurement; eve
 
 ## Architecture notes
 
-- Fetch layer: `src/lib/marketData.ts` (live Yahoo → sample JSON)
+- Fetch layer: `src/lib/marketData.ts` (live Yahoo or official FRED/Tesouro → sample JSON)
 - Yahoo proxy: `api/yahoo.ts` (Vercel Edge; nested `/api/yahoo/*` rewritten here) and `workers/yahoo-proxy/` (Cloudflare)
+- Yield proxies: `api/fred.ts` (FRED CSV → JSON) and `api/tesouro.ts` (Tesouro Direto CSV → NTN-F nearest-10y JSON); Vite serves the same paths in `npm run dev` / `preview`
 - Time windows: `src/lib/ranges.ts`
 - AI panel config: `src/data/aiPricing.ts`
 - DRAM config: `src/data/dram.ts`
