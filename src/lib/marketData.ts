@@ -98,13 +98,11 @@ function yahooLiveUrls(symbol: string, query: string): string[] {
   return urls;
 }
 
-async function fetchYahooLive(
+async function fetchYahooQuery(
   symbol: string,
-  range: TimeRange,
+  query: string,
   signal: AbortSignal,
 ): Promise<ReturnType<typeof parseYahoo>> {
-  const { range: yahooRange, interval } = yahooParams(range);
-  const query = `range=${yahooRange}&interval=${interval}&includePrePost=false`;
   const urls = yahooLiveUrls(symbol, query);
   let lastError: unknown;
   for (const url of urls) {
@@ -116,6 +114,45 @@ async function fetchYahooLive(
     }
   }
   throw lastError instanceof Error ? lastError : new Error("Yahoo live fetch failed");
+}
+
+function fetchYahooLive(
+  symbol: string,
+  range: TimeRange,
+  signal: AbortSignal,
+): Promise<ReturnType<typeof parseYahoo>> {
+  const { range: yahooRange, interval } = yahooParams(range);
+  return fetchYahooQuery(symbol, `range=${yahooRange}&interval=${interval}&includePrePost=false`, signal);
+}
+
+/**
+ * On weekends and holidays Yahoo answers range=1d with HTTP 200 but zero bars,
+ * so the last real session is recovered from a 5d window at the same interval.
+ */
+function fetchYahooLastSession(
+  symbol: string,
+  signal: AbortSignal,
+): Promise<ReturnType<typeof parseYahoo>> {
+  return fetchYahooQuery(symbol, "range=5d&interval=5m&includePrePost=false", signal);
+}
+
+/**
+ * Last-resort live path for the 1D range: slice the most recent 24 hours of
+ * trading out of the 5d series. Returns null when the symbol genuinely has no
+ * recent bars, so the caller can still fall back to the labeled sample.
+ */
+async function recoverLastSession(
+  symbol: string,
+  signal: AbortSignal,
+): Promise<{ points: SeriesPoint[]; currency?: string } | null> {
+  try {
+    const wide = await fetchYahooLastSession(symbol, signal);
+    const points = filterPointsByRange(wide.points, "1D");
+    if (points.length < 2) return null;
+    return { points, currency: wide.currency };
+  } catch {
+    return null;
+  }
 }
 
 function loadSampleFile(file: string): Promise<SampleFile> {
@@ -204,6 +241,31 @@ export async function loadMarketSeries(
         interval,
         quotePrint,
       };
+    }
+
+    if (range === "1D") {
+      const recovered = await recoverLastSession(spec.symbol, signal);
+      if (recovered) {
+        return {
+          symbol: spec.symbol,
+          title: spec.title,
+          unit: spec.unit,
+          currency: recovered.currency ?? live.currency,
+          points: recovered.points,
+          last: recovered.points[recovered.points.length - 1].v,
+          source: "live" satisfies DataSource,
+          sourceLabel: `Yahoo Finance ${spec.symbol}`,
+          note: [
+            spec.note,
+            "Market closed — Yahoo's 1d window returned no bars, so the chart shows the last 24 hours of trading from the live 5d series.",
+          ]
+            .filter(Boolean)
+            .join(" "),
+          fetchedAt: new Date().toISOString(),
+          interval: "5m",
+          quotePrint,
+        };
+      }
     }
     liveError = "Live payload had too few points";
   } catch (err) {
