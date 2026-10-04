@@ -8,7 +8,7 @@ export function AppShell() {
           <span className="brand-mark" aria-hidden="true" />
           <div>
             <div className="brand-name">Markets Desk</div>
-            <div className="brand-sub">Commodities · country indexes · AI economics</div>
+            <div className="brand-sub">Commodities · country indexes · currencies · bond yields</div>
           </div>
         </div>
         <nav className="nav" aria-label="Primary">
@@ -21,6 +21,18 @@ export function AppShell() {
           >
             Country indexes
           </NavLink>
+          <NavLink
+            to="/currencies"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Currencies
+          </NavLink>
+          <NavLink
+            to="/yields"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Bond yields
+          </NavLink>
         </nav>
       </header>
       <main className="page">
@@ -28,10 +40,10 @@ export function AppShell() {
       </main>
       <footer className="foot">
         <p>
-          Live series via Yahoo Finance chart API when reachable (proxied in <code>npm run dev</code> /{" "}
-          <code>npm run preview</code>). Otherwise the UI falls back to a labeled cached snapshot — never
-          presented as a live tick. DRAM and AI energy figures that are not vendor-published are marked
-          illustrative. Not investment advice.
+          Live series via Yahoo Finance (commodities, indexes, FX) and official yield publishers (FRED /
+          Tesouro Direto) when the matching proxy is reachable. Otherwise the UI falls back to a labeled
+          cached snapshot — never presented as a live tick. DRAM and AI energy figures that are not
+          vendor-published are marked illustrative. Not investment advice.
         </p>
       </footer>
     </div>

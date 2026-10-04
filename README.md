@@ -1,12 +1,12 @@
 # markets-dashboard
 
-Interactive two-page markets desk for [commodities](#page-1--commodities) and [country equity indexes](#page-2--country-indexes). Built as a Vite + React + TypeScript SPA with Recharts.
+Interactive markets desk for [commodities](#page-1--commodities), [country equity indexes](#page-2--country-indexes), [currencies](#page-3--currencies), and [bond yields](#page-4--bond-yields). Built as a Vite + React + TypeScript SPA with Recharts.
 
 **Deploy this repo to Vercel for Live-always; Pages needs `VITE_YAHOO_PROXY_BASE` pointing at the proxy.**
 
 **Live (GitHub Pages):** [https://jainamit4.github.io/markets-dashboard/](https://jainamit4.github.io/markets-dashboard/)
 
-That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes)
+That Pages URL is the public browser launch path. Hash routes: [commodities](https://jainamit4.github.io/markets-dashboard/#/) · [country indexes](https://jainamit4.github.io/markets-dashboard/#/indexes) · [currencies](https://jainamit4.github.io/markets-dashboard/#/currencies) · [bond yields](https://jainamit4.github.io/markets-dashboard/#/yields)
 
 Repo: [https://github.com/jainamit4/markets-dashboard](https://github.com/jainamit4/markets-dashboard)
 
@@ -103,6 +103,38 @@ Time range control: **1D / 1W / 1M / 3M / 1Y / YTD**. Hover for tooltips; longer
 
 Each chart card loads on its own. One failed series does not crash the page.
 
+### Page 3 — Currencies
+
+Each card is that currency **against the US dollar**, using Yahoo’s USD/XXX `=X` pair so the quote is **units of the named currency per 1 US dollar** (not the inverted AUDUSD / GBPUSD / EURUSD convention).
+
+- Japanese yen (`JPY=X`) — yen per 1 USD
+- Mexican peso (`MXN=X`) — pesos per 1 USD (its own series, not Argentina or Brazil)
+- Australian dollar (`AUD=X`) — Australian dollars per 1 USD
+- Indian rupee (`INR=X`) — rupees per 1 USD
+- British pound (`GBP=X`) — pounds per 1 USD
+- Euro (`EUR=X`) — euros per 1 USD
+- Iranian rial (`IRR=X`) — rials per 1 USD (Yahoo’s print; official vs parallel-market convention can jump in the history)
+- Argentine peso (`ARS=X`) — pesos per 1 USD
+- Brazilian real (`BRL=X`) — reais per 1 USD
+
+Same Live → labeled Sample fallback as the other Yahoo pages.
+
+### Page 4 — Bond yields
+
+One 10-year sovereign yield card for the same places. Live data is **not** Yahoo `10Y=RR` (those tickers 404). Cards use FRED where it republishes the official OECD 10-year government yield, and Tesouro Direto where FRED has no Brazil 10-year series. Each card labels the source, series id, unit (percent), and as-of convention.
+
+- Japan — FRED `IRLTLT01JPM156N` (OECD 10-year JGB, monthly average, % per annum)
+- Mexico — FRED `IRLTLT01MXM156N`
+- Australia — FRED `IRLTLT01AUM156N`
+- India — FRED `INDIRLTLT01STM`
+- United Kingdom — FRED `IRLTLT01GBM156N` (10-year gilt)
+- Euro area — **Germany 10-year Bund**, FRED `IRLTLT01DEM156N` (the usual euro-area sovereign benchmark; the euro is not a country)
+- Brazil — Tesouro Direto NTN-F (Prefixado com Juros Semestrais) official **Taxa Venda Manhã**, instrument with remaining maturity nearest 10 years (daily). FRED has no Brazil 10-year OECD series.
+- Argentina — **Unavailable**. Checked FRED, BCRA v4 Monetarias, and datos.gob.ar (no current 10-year sovereign yield).
+- Iran — **Unavailable**. Checked FRED / OECD MEI and CBI.ir (no fetchable 10-year series).
+
+Monthly FRED windows (1D / 1W) may only have a last print. Same Live → labeled Sample fallback via `/api/fred` and `/api/tesouro`.
+
 ## Data sources
 
 ### Live commodities and indexes
@@ -134,6 +166,24 @@ Direct `query1.finance.yahoo.com` is attempted as a last live path. If live fetc
 | Shanghai Composite | `000001.SS` | CNY |
 | Jakarta Composite | `^JKSE` | IDR |
 | Nikkei 225 | `^N225` | JPY |
+| Japanese yen | `JPY=X` | JPY per 1 USD |
+| Mexican peso | `MXN=X` | MXN per 1 USD |
+| Australian dollar | `AUD=X` | AUD per 1 USD |
+| Indian rupee | `INR=X` | INR per 1 USD |
+| British pound | `GBP=X` | GBP per 1 USD |
+| Euro | `EUR=X` | EUR per 1 USD |
+| Iranian rial | `IRR=X` | IRR per 1 USD |
+| Argentine peso | `ARS=X` | ARS per 1 USD |
+| Brazilian real | `BRL=X` | BRL per 1 USD |
+| Japan 10-year JGB | FRED `IRLTLT01JPM156N` | % per annum, monthly average |
+| Mexico 10-year | FRED `IRLTLT01MXM156N` | % per annum, monthly average |
+| Australia 10-year | FRED `IRLTLT01AUM156N` | % per annum, monthly average |
+| India 10-year | FRED `INDIRLTLT01STM` | % per annum, monthly average |
+| UK 10-year gilt | FRED `IRLTLT01GBM156N` | % per annum, monthly average |
+| Germany 10-year Bund (euro-area card) | FRED `IRLTLT01DEM156N` | % per annum, monthly average |
+| Brazil ~10-year NTN-F | Tesouro Direto `NTNF-NEAREST-10Y` | % per annum, daily morning sell yield |
+| Argentina 10-year | — | **Unavailable** (no public series fetched) |
+| Iran 10-year | — | **Unavailable** (no public series fetched) |
 
 ### Memory (DRAM)
 
@@ -168,10 +218,11 @@ Only Google’s 0.24 Wh/prompt figure is a published production measurement; eve
 
 ## Architecture notes
 
-- Fetch layer: `src/lib/marketData.ts` (live Yahoo → sample JSON)
+- Fetch layer: `src/lib/marketData.ts` (live Yahoo or official FRED/Tesouro → sample JSON)
 - Yahoo proxy: `api/yahoo.ts` (Vercel Edge; nested `/api/yahoo/*` rewritten here) and `workers/yahoo-proxy/` (Cloudflare)
+- Yield proxies: `api/fred.ts` (FRED CSV → JSON) and `api/tesouro.ts` (Tesouro Direto CSV → NTN-F nearest-10y JSON); Vite serves the same paths in `npm run dev` / `preview`
 - Time windows: `src/lib/ranges.ts`
 - AI panel config: `src/data/aiPricing.ts`
 - DRAM config: `src/data/dram.ts`
 
-Not investment advice. Futures, indexes, and token prices move; refresh samples and the AI as-of date when you need a new snapshot.
+Not investment advice. Futures, indexes, FX, yields, and token prices move; refresh samples and the AI as-of date when you need a new snapshot.

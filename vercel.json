@@ -8,6 +8,14 @@
       "destination": "/api/yahoo"
     },
     {
+      "source": "/api/fred/:path*",
+      "destination": "/api/fred"
+    },
+    {
+      "source": "/api/tesouro/:path*",
+      "destination": "/api/tesouro"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
